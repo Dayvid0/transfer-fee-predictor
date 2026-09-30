@@ -1,0 +1,9 @@
+# Dashboard runs entirely offline: no telemetry, no usage pings.
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
+
+[runner]
+fastReruns = true

@@ -14,15 +14,10 @@ N_WORST = 10
 def fmt_metrics(table: pd.DataFrame) -> str:
     out = table.copy()
     out["mae_log"] = out["mae_log"].map(lambda v: f"{v:.4f}")
-
-    def fmt(col: str, spec) -> pd.Series:
-        return out[col].map(lambda v: "-" if pd.isna(v) else spec.format(v))
-
-    out["mae_eur"] = fmt("mae_eur", E.EUR_FMT)
-    out["rmse_eur"] = fmt("rmse_eur", E.EUR_FMT)
-    out["bias_eur"] = fmt("bias_eur", E.EUR_FMT)
-    out["mape_pct"] = fmt("mape_pct", "{:.1f}")
-    out["r2_log"] = fmt("r2_log", "{:.3f}")
+    specs = (("mae_eur", E.EUR_FMT), ("rmse_eur", E.EUR_FMT),
+             ("bias_eur", E.EUR_FMT), ("mape_pct", "{:.1f}"), ("r2_log", "{:.3f}"))
+    for col, spec in specs:
+        out[col] = out[col].map(lambda v, s=spec: "-" if pd.isna(v) else s.format(v))
     return E.markdown_table(out)
 
 
@@ -45,11 +40,8 @@ def by_season(models, preds: pd.DataFrame) -> str:
         rows.append(row)
 
     frame = pd.DataFrame(rows)
-    for col in frame.columns[3:]:
-        frame[col] = frame[col].map(lambda v: E.EUR_FMT.format(v))
-    frame["median_actual_eur"] = frame["median_actual_eur"].map(
-        lambda v: E.EUR_FMT.format(v)
-    )
+    for col in list(frame.columns[3:]) + ["median_actual_eur"]:
+        frame[col] = frame[col].map(E.EUR_FMT.format)
     return E.markdown_table(frame)
 
 
