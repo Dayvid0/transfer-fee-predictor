@@ -23,14 +23,24 @@ def csv_path(tmp_path_factory, raw: pd.DataFrame) -> str:
 
 
 @pytest.fixture(scope="session")
-def keyed(csv_path: str) -> pd.DataFrame:
-    frame, _ = F.load_features(csv_path)
-    return frame
+def loaded(csv_path: str) -> tuple[pd.DataFrame, float]:
+    """Deflated feature frame plus the price index estimated from it."""
+    return F.load_features(csv_path)
 
 
 @pytest.fixture(scope="session")
-def models(keyed: pd.DataFrame):
-    return fit_models(keyed)
+def keyed(loaded) -> pd.DataFrame:
+    return loaded[0]
+
+
+@pytest.fixture(scope="session")
+def price_index(loaded) -> float:
+    return loaded[1]
+
+
+@pytest.fixture(scope="session")
+def models(keyed, price_index):
+    return fit_models(keyed, price_index)
 
 
 @pytest.fixture(scope="session")

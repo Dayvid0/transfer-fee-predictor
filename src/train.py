@@ -41,8 +41,11 @@ class Split:
 
 @dataclass
 class TrainedModels:
+    """All three models, fitted on real-terms targets."""
+
     split: Split
-    baseline_log: np.ndarray
+    price_index: float
+    baseline_log_real: np.ndarray
     linear: Pipeline
     booster: lgb.LGBMRegressor
     valid_years: int = field(default=0)
@@ -70,12 +73,13 @@ def time_split(
     return Split(train=train, valid=valid, test=test, cols=cols)
 
 
-def fit_models(frame: pd.DataFrame) -> TrainedModels:
-    """Fit models A, B and C.
+def fit_models(frame: pd.DataFrame, index: float) -> TrainedModels:
+    """Fit models A, B and C on the real-terms target.
 
     Note the deliberate asymmetry with the usual convention: the *fit* window
     ends at 2021 and the 2022 season is used only for early stopping, so the
-    2023-2025 test block stays completely untouched.
+    2023-2025 test block stays completely untouched. ``index`` is the annual
+    fee-inflation estimate, also derived from training seasons only.
     """
     split = time_split(frame)
 
@@ -90,10 +94,11 @@ def fit_models(frame: pd.DataFrame) -> TrainedModels:
         [("scale", StandardScaler()), ("model", LinearRegression())]
     ).fit(x_tr, y_tr)
 
-    # Shallow trees with linear leaves, chosen on the 2022 validation season
-    # only. linear_tree=True is the important bit: plain regression trees
-    # cannot extrapolate the fee-inflation trend past the last training season,
-    # whereas linear leaves can.
+    # Ordinary regression trees are now viable because the target is deflated to
+    # base-year euros, which removes the inflation trend they could not
+    # extrapolate. linear_tree=True still buys a small but reproducible gain on
+    # the validation season (0.2741 vs 0.2772 log-MAE), so it stays. All
+    # hyperparameters were chosen on the 2022 validation season only.
     booster = lgb.LGBMRegressor(
         objective="regression",
         n_estimators=8000,
@@ -118,13 +123,14 @@ def fit_models(frame: pd.DataFrame) -> TrainedModels:
         callbacks=[lgb.early_stopping(200, verbose=False)],
     )
 
-    # Model A needs no fitting: the club's own pre-transfer valuation, mapped
-    # onto the same log1p scale as the target.
-    baseline_log = np.log1p(split.test["market_value_eur"].to_numpy())
+    # Model A needs no fitting: the club's own pre-transfer valuation, on the
+    # same real-terms log1p scale the other two models predict.
+    baseline_log_real = np.log1p(split.test["market_value_real"].to_numpy())
 
     return TrainedModels(
         split=split,
-        baseline_log=baseline_log,
+        price_index=index,
+        baseline_log_real=baseline_log_real,
         linear=linear,
         booster=booster,
         valid_years=int(booster.best_iteration_ or booster.n_estimators),

@@ -100,9 +100,13 @@ def hidden_log_fee(
     contract_years_left: np.ndarray,
     position: np.ndarray,
     league: np.ndarray,
-    noise: np.ndarray,
+    noise: np.ndarray | float = 0.0,
 ) -> np.ndarray:
-    """The unobservable pricing rule. Peak value age sits around 24-27."""
+    """The unobservable pricing rule. Peak value age sits around 24-27.
+
+    ``noise`` defaults to zero so a caller can take the clean signal and add
+    its own error term afterwards.
+    """
     age_shape = np.exp(-0.5 * ((age - 25.0) / 5.5) ** 2) - 0.35
     league_strength = np.array([C.LEAGUE_STRENGTH[l] for l in league])
     position_prem = np.array([C.POSITION_PREMIUM[p] for p in position])
@@ -133,8 +137,7 @@ def make_transfers(seed: int = C.SEED) -> pd.DataFrame:
         _destination_league(rng, o) for o in df["origin_league"].to_numpy()
     ]
 
-    noise = rng.normal(0.0, C.FEE_NOISE_SIGMA, len(df))
-    log_fee = hidden_log_fee(
+    log_fee_signal = hidden_log_fee(
         df["season"].to_numpy(),
         df["age"].to_numpy(),
         df["goals_p90"].to_numpy(),
@@ -143,17 +146,29 @@ def make_transfers(seed: int = C.SEED) -> pd.DataFrame:
         df["contract_years_left"].to_numpy(),
         df["position"].to_numpy(),
         df["league"].to_numpy(),
-        noise,
     )
 
-    # A club's pre-transfer valuation is a noisy read of the same fundamentals.
-    mv_log = log_fee + rng.normal(0.0, C.MARKET_VALUE_NOISE_SIGMA, len(df))
-    df["market_value_eur"] = (
-        np.round(np.clip(np.exp(mv_log), 250_000, 220_000_000) / 10_000) * 10_000
-    ).astype("int64")
+    # Negotiation shock: an independent draw that the valuation never sees.
+    fee_noise = rng.normal(0.0, C.FEE_NOISE_SIGMA, len(df))
+    log_fee = log_fee_signal + fee_noise
 
+    # A club's valuation is its own estimate of the same fundamentals with its
+    # own independent error. Deriving it from log_fee rather than
+    # log_fee_signal would leak the negotiation shock into it.
+    mv_noise = rng.normal(0.0, C.MARKET_VALUE_NOISE_SIGMA, len(df))
+    log_market_value = log_fee_signal + mv_noise
+
+    df["market_value_eur"] = (
+        np.round(np.clip(np.exp(log_market_value), 250_000, 220_000_000) / 10_000)
+        * 10_000
+    ).astype("int64")
     fee = np.round(np.clip(np.exp(log_fee), 250_000, 160_000_000) / 5_000) * 5_000
     df["fee_eur"] = fee.astype("int64")
+
+    # Ground truth, kept only as an answer key for scoring and for the test
+    # proving the two noise terms independent. Blocked from features by
+    # config.NON_FEATURE_COLUMNS.
+    df["log_fee_signal"] = np.round(log_fee_signal, 6)
 
     # Loans and free transfers: real rows that must be dropped before training.
     n_free = int(round(C.FREE_OR_LOAN_SHARE * len(df)))
@@ -163,20 +178,9 @@ def make_transfers(seed: int = C.SEED) -> pd.DataFrame:
     df.loc[free_idx, "is_free_or_loan"] = True
 
     columns = [
-        "player_id",
-        "season",
-        "age",
-        "position",
-        "league",
-        "origin_league",
-        "goals_p90",
-        "assists_p90",
-        "xg_p90",
-        "minutes",
-        "contract_years_left",
-        "market_value_eur",
-        "fee_eur",
-        "is_free_or_loan",
+        "player_id", "season", "age", "position", "league", "origin_league",
+        "goals_p90", "assists_p90", "xg_p90", "minutes", "contract_years_left",
+        "market_value_eur", "fee_eur", "is_free_or_loan", "log_fee_signal",
     ]
     return df[columns].sort_values(["season", "player_id"]).reset_index(drop=True)
 

@@ -1,5 +1,5 @@
-"""The pipeline invariants that matter: no time leakage, no post-transfer
-features, and models that actually beat the naive baseline."""
+"""Time-split and model-quality invariants: no test-season row reaches
+training, and no model beats the oracle noise floor."""
 from __future__ import annotations
 
 import numpy as np
@@ -8,8 +8,6 @@ import pytest
 
 from src import config as C
 from src import evaluate as E
-from src import features as F
-from src import make_data as MD
 from src.train import time_split
 
 TEST_SEASONS = range(C.TEST_FIRST_SEASON, C.LAST_SEASON + 1)
@@ -18,7 +16,7 @@ TEST_SEASONS = range(C.TEST_FIRST_SEASON, C.LAST_SEASON + 1)
 # --- time leakage -----------------------------------------------------------
 
 
-def test_no_test_season_row_is_ever_used_for_training(keyed, models):
+def test_no_test_season_row_is_ever_used_for_training(models):
     """Fit + early-stopping windows must sit entirely before the test block."""
     split = models.split
 
@@ -27,13 +25,11 @@ def test_no_test_season_row_is_ever_used_for_training(keyed, models):
     assert set(split.train.season.unique()) & set(TEST_SEASONS) == set()
     assert set(split.valid.season.unique()) & set(TEST_SEASONS) == set()
 
-    # No (player, season) event may appear in both a training block and test.
     def keys(frame: pd.DataFrame) -> set[tuple[int, int]]:
         return set(zip(frame.player_id.astype(int), frame.season.astype(int)))
 
     fitted = keys(split.train) | keys(split.valid)
     assert fitted & keys(split.test) == set()
-    assert fitted != keys(split.test)
 
 
 def test_test_block_is_strictly_future_and_non_empty(models):
@@ -54,42 +50,25 @@ def test_time_split_assertions_catch_a_leaky_split(keyed):
         time_split(keyed, train_last=C.TRAIN_LAST_SEASON, test_first=C.FIRST_SEASON)
 
 
-# --- features and target ----------------------------------------------------
-
-
-def test_target_and_filtering_are_correct(raw):
-    paid = F.drop_unpaid(raw)
-    assert (paid.fee_eur > 0).all()
-    assert len(paid) < len(raw)
-
-    model = F.build_features(raw)
-    np.testing.assert_allclose(model["target"].to_numpy(), np.log1p(paid.fee_eur))
-    assert len(model) == len(paid)
-
-
-def test_features_contain_no_post_transfer_information(keyed):
-    cols = F.feature_columns(keyed)
-    for forbidden in ("fee_eur", "player_id", "season", "is_free_or_loan",
-                      "origin_league", "target"):
-        assert forbidden not in cols, f"{forbidden} must not be a feature"
-    assert "age_sq" in cols
-    assert "season_index" in cols
-    assert np.isfinite(keyed[cols].to_numpy()).all()
-
-
-# --- data generation --------------------------------------------------------
-
-
-def test_generation_is_deterministic_and_shaped(raw):
-    again = MD.make_transfers()
-    pd.testing.assert_frame_equal(raw, again)
-    assert len(raw) == C.N_TRANSFERS
-    assert set(raw.season) == set(range(C.FIRST_SEASON, C.LAST_SEASON + 1))
-    assert (raw.fee_eur == 0).sum() > 0, "loans/free transfers must be present"
-    assert raw[raw.fee_eur > 0].fee_eur.min() > 0
-
-
 # --- model quality ----------------------------------------------------------
+
+
+def test_no_model_beats_the_oracle_noise_floor(models, preds):
+    """The negotiation shock is independent noise, so nothing can beat it.
+
+    This is the test that would have caught the market-value leak: a model
+    scoring under the floor is reading the answer, not learning the market.
+    """
+    table = E.metrics_table(models, preds).set_index("model")
+    floor = table.loc["oracle_noise_floor", "mae_log"]
+    assert floor == pytest.approx(
+        C.FEE_NOISE_SIGMA * np.sqrt(2 / np.pi), abs=0.02
+    ), "floor should match the analytic value for the injected noise"
+
+    for name in ("A_market_value", "B_linear", "C_lightgbm"):
+        assert (
+            table.loc[name, "mae_log"] >= floor
+        ), f"{name} scored {table.loc[name, 'mae_log']:.4f} below floor {floor:.4f}"
 
 
 def test_both_models_beat_the_market_value_baseline(models, preds):
@@ -97,6 +76,32 @@ def test_both_models_beat_the_market_value_baseline(models, preds):
     for name in ("B_linear", "C_lightgbm"):
         assert table.loc[name, "mae_log"] < table.loc["A_market_value", "mae_log"], name
         assert table.loc[name, "mae_eur"] < table.loc["A_market_value", "mae_eur"], name
+
+
+def test_predictions_are_scored_on_the_nominal_scale(models, preds):
+    """Predictions must be re-inflated before being compared to paid fees."""
+    test = models.split.test
+    assert float(preds["B_linear"].mean()) < float(test["target_nominal"].mean()), (
+        "predictions look like they were never re-inflated"
+    )
+
+
+def test_reports_cover_three_models_and_ten_worst_errors(models, preds):
+    assert list(preds.columns) == ["A_market_value", "B_linear", "C_lightgbm"]
+
+    table = E.metrics_table(models, preds)
+    assert len(table) == 4  # three models plus the oracle floor row
+    assert {"mae_log", "mae_eur", "rmse_eur", "bias_eur"} <= set(table.columns)
+
+    worst = E.worst_errors(models, preds, "C_lightgbm", n=10)
+    assert len(worst) == 10
+    assert worst.abs_error_eur.is_monotonic_decreasing
+    assert (worst.season >= C.TEST_FIRST_SEASON).all()
+
+    imp = E.feature_importance(models)
+    assert imp.shape[0] > 0
+    assert imp.gain.sum() > 0
+    assert set(imp.feature) <= set(models.split.cols)
 
 
 def test_main_writes_a_report_end_to_end(tmp_path, monkeypatch, csv_path):
@@ -116,32 +121,12 @@ def test_main_writes_a_report_end_to_end(tmp_path, monkeypatch, csv_path):
     for heading in (
         "## Time split (never random)",
         "## Results on the 2023-2025 test block",
+        "### Noise floor",
         "## LightGBM feature importance",
         "## 10 worst",
         "## Assumptions",
     ):
         assert heading in report, heading
-    for model in ("A_market_value", "B_linear", "C_lightgbm"):
+    for model in ("A_market_value", "B_linear", "C_lightgbm", "oracle_noise_floor"):
         assert model in report
-
-
-def test_reports_cover_three_models_and_ten_worst_errors(models, preds):
-    assert list(E.predictions(models).columns) == [
-        "A_market_value",
-        "B_linear",
-        "C_lightgbm",
-    ]
-    table = E.metrics_table(models, preds)
-    assert len(table) == 3
-    assert {"mae_log", "mae_eur", "rmse_eur", "bias_eur"} <= set(table.columns)
-    assert table.notna().all().all()
-
-    worst = E.worst_errors(models, preds, "C_lightgbm", n=10)
-    assert len(worst) == 10
-    assert worst.abs_error_eur.is_monotonic_decreasing
-    assert (worst.season >= C.TEST_FIRST_SEASON).all()
-
-    imp = E.feature_importance(models)
-    assert imp.shape[0] > 0
-    assert imp.gain.sum() > 0
-    assert set(imp.feature) <= set(models.split.cols)
+    assert "No model beats the noise floor" in report

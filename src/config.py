@@ -59,6 +59,13 @@ POSITION_PREMIUM = {
     "GK": -0.10,
 }
 
-# Columns that describe what happened *after* the transfer decision, or are
-# pure identifiers. They must never become model features.
-NON_FEATURE_COLUMNS = ("player_id", "fee_eur", "origin_league", "is_free_or_loan")
+# Columns that describe what happened *after* the transfer decision, are pure
+# identifiers, or are the generator's ground-truth answer key. They must never
+# become model features.
+NON_FEATURE_COLUMNS = (
+    "player_id",
+    "fee_eur",
+    "origin_league",
+    "is_free_or_loan",
+    "log_fee_signal",
+)
