@@ -2,4 +2,14 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Secrets: the football-data.org API token lives here.
+.env
+
+# Cached downloads and generated data, both reproducible from source.
 data/transfers.csv
+data/real_players.csv
+data/real_players_raw.zip
+
+# football-data.org JSON response cache (re-fetchable, but rate limited).
+data/api/

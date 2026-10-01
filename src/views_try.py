@@ -8,9 +8,20 @@ import streamlit as st
 
 from src import config as C
 from src import ui
+from src import visuals as V
 from src.views_data import _style
 
 AGE_RANGE = np.arange(16, 39)
+
+
+def season_median(paid: pd.DataFrame, season: int) -> float:
+    """Median paid fee in one season: the gauge's reference point.
+
+    A descriptive statistic of the market, not a model output, so it is read
+    from every paid transfer in that season rather than from the test block.
+    """
+    fees = paid.loc[(paid["season"] == season) & (paid["fee_eur"] > 0), "fee_eur"]
+    return float(fees.median()) if len(fees) else 0.0
 
 
 def _profile_inputs() -> dict:
@@ -58,6 +69,31 @@ def try_it(pipeline: ui.Pipeline) -> None:
     )
 
     preds = ui.predict_fee(pipeline, profile)
+    pitch_col, gauge_col = st.columns([1, 1])
+
+    with pitch_col:
+        st.markdown(
+            V.position_pitch_svg(profile["position"]), unsafe_allow_html=True
+        )
+        st.caption(
+            f"**{profile['position']}** on a half-pitch. Striker, attacking "
+            "midfield and wide men sit highest; the keeper owns the six-yard box."
+        )
+
+    with gauge_col:
+        median = season_median(pipeline.paid, int(profile["season"]))
+        st.plotly_chart(
+            V.fee_gauge(
+                preds["lightgbm"], median,
+                title=f"LightGBM fee vs {int(profile['season'])} median",
+            ),
+            width="stretch",
+        )
+        st.caption(
+            f"The season median is {ui.eur_m(median)}; the gauge shows how far "
+            "above or below it this profile is priced."
+        )
+
     c1, c2, c3 = st.columns(3)
     c1.metric("Linear regression", ui.eur(preds["linear"]))
     c2.metric("LightGBM", ui.eur(preds["lightgbm"]))
@@ -78,7 +114,7 @@ def try_it(pipeline: ui.Pipeline) -> None:
             x=AGE_RANGE,
             y=curve["lightgbm"],
             name="LightGBM",
-            line=dict(color="#2E6F9E", width=2.5),
+            line=dict(color=ui.PALETTE["accent"], width=2.5),
         )
     )
     fig.add_trace(
@@ -86,7 +122,7 @@ def try_it(pipeline: ui.Pipeline) -> None:
             x=AGE_RANGE,
             y=curve["linear"],
             name="Linear regression",
-            line=dict(color="#D9822B", width=2, dash="dash"),
+            line=dict(color=ui.PALETTE["warn"], width=2, dash="dash"),
         )
     )
     fig.add_trace(
@@ -95,7 +131,7 @@ def try_it(pipeline: ui.Pipeline) -> None:
             y=[float(np.max(curve["lightgbm"]))],
             mode="markers",
             name="Peak",
-            marker=dict(color="#2E6F9E", size=11, symbol="star"),
+            marker=dict(color=ui.PALETTE["accent"], size=11, symbol="star"),
         )
     )
     fig = _style(

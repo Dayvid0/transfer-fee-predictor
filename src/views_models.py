@@ -66,7 +66,9 @@ def model_comparison(pipeline: ui.Pipeline) -> None:
     plot = pipeline.metrics.copy()
     plot["label"] = plot["model"].map(lambda v: MODEL_LABELS.get(v, v))
     plot["value"] = plot[column]
-    plot["colour"] = ["#B0B7C3" if "oracle" in m else "#2E6F9E" for m in plot.model]
+    plot["colour"] = [
+        ui.PALETTE["muted"] if "oracle" in m else ui.PALETTE["accent"] for m in plot.model
+    ]
 
     fig = go.Figure(
         go.Bar(
@@ -139,6 +141,7 @@ def predicted_vs_actual(pipeline: ui.Pipeline) -> None:
         x="actual",
         y="predicted",
         color=colour_by,
+        color_discrete_sequence=ui.SERIES,
         log_x=True,
         log_y=True,
         opacity=0.6,
@@ -152,7 +155,7 @@ def predicted_vs_actual(pipeline: ui.Pipeline) -> None:
             y=[lo, hi],
             mode="lines",
             name="perfect prediction",
-            line=dict(dash="dash", color="#444444", width=1.5),
+            line=dict(dash="dash", color=ui.PALETTE["muted"], width=1.5),
         )
     )
     fig = _style(
@@ -167,8 +170,13 @@ def predicted_vs_actual(pipeline: ui.Pipeline) -> None:
         "fees grow, because a fixed euro error matters less on a large deal."
     )
 
-    fig = px.histogram(plot, x="residual_log", nbins=60, color_discrete_sequence=["#2E6F9E"])
-    fig.add_vline(x=0.0, line_dash="dash", line_color="#444444")
+    fig = px.histogram(
+        plot,
+        x="residual_log",
+        nbins=60,
+        color_discrete_sequence=[ui.PALETTE["secondary"]],
+    )
+    fig.add_vline(x=0.0, line_dash="dash", line_color=ui.PALETTE["muted"])
     fig = _style(
         fig,
         "Residuals: log predicted minus log actual",

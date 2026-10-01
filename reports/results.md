@@ -1,6 +1,6 @@
 # Football transfer fee prediction
 
-Generated 2026-09-30 15:31 · seed 20240517 · data regenerated
+Generated 2026-10-01 13:08 · seed 20240517 · data reused existing CSV
 
 ## Setup
 

@@ -9,10 +9,11 @@ import pandas as pd
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from src import lookup_tables as LT
 from src import ui
 from src.views_data import _style
 from src.views_models import MODEL_LABELS, _display_table
-from src.views_try import AGE_RANGE
+from src.views_try import AGE_RANGE, season_median
 
 APP = str(Path(__file__).resolve().parents[1] / "app.py")
 PAGES = [
@@ -22,6 +23,7 @@ PAGES = [
     "Feature importance",
     "Try it yourself",
     "Worst errors",
+    "Player lookup",
 ]
 
 
@@ -95,7 +97,18 @@ def _blank_figure():
     return go.Figure()
 
 
-def test_cached_loader_returns_the_same_pipeline(tmp_path):
+def test_lookup_cards_cover_the_largest_fees(dashboard):
+    """Cards must be ordered richest first and never show a zero-fee loan."""
+    rows = LT.player_transfers(dashboard, _scored_player(dashboard))
+    cards = LT.cards(rows)
+    assert len(cards) == min(5, int((rows["fee_eur"] > 0).sum()))
+    fees = [c["fee_eur"] for c in cards]
+    assert fees == sorted(fees, reverse=True)
+    assert all(f > 0 for f in fees)
+    assert all(c["name"].startswith("Player ") for c in cards)
+
+
+def test_cached_loader_returns_the_same_pipeline():
     """st.cache_resource must not refit per call, and must work outside a
     Streamlit runtime as well as inside one."""
     first = ui.load_pipeline()
@@ -112,3 +125,94 @@ def test_every_page_renders_without_error(page: str) -> None:
     at.radio(key="page").set_value(page).run()
     assert not at.exception, [str(e.value) for e in at.exception]
     assert at.header[0].value == page
+
+
+def _scored_player(dashboard: ui.Pipeline) -> int:
+    """A player with at least one held-out transfer to look up."""
+    test = dashboard.test
+    return int(test.iloc[0]["player_id"])
+
+
+def test_player_choices_covers_every_player_in_the_raw_table(dashboard):
+    labels = LT.player_choices(dashboard.raw)
+    assert len(labels) == dashboard.raw["player_id"].nunique()
+    assert set(labels) == set(dashboard.raw["player_id"].unique())
+    # The label carries the ID so a filtered list stays readable.
+    assert all(str(pid) in text for pid, text in labels.items())
+
+
+def test_player_lookup_returns_only_that_players_transfers(dashboard):
+    player_id = _scored_player(dashboard)
+    rows = LT.player_transfers(dashboard, player_id)
+
+    assert not rows.empty
+    assert set(rows["player_id"]) == {player_id}
+    # Newest season first, one row per (player, season).
+    assert rows["season"].is_monotonic_decreasing
+    assert not rows.duplicated(["player_id", "season"]).any()
+    expected = dashboard.raw.loc[dashboard.raw["player_id"] == player_id]
+    assert len(rows) == len(expected)
+
+
+def test_lookup_joins_predictions_to_the_right_transfer(dashboard):
+    """The join is on (player_id, season): a prediction must never be attached
+    to a different season of the same player, or a different player's row."""
+    player_id = _scored_player(dashboard)
+    rows = LT.player_transfers(dashboard, player_id)
+
+    test = dashboard.test.copy()
+    test["_pred_c"] = dashboard.predictions_eur("C_lightgbm")
+    test = test.set_index(["player_id", "season"])
+    for _, row in rows.iterrows():
+        key = (int(row["player_id"]), int(row["season"]))
+        if key not in test.index:
+            assert pd.isna(row["pred_c_eur"]), key
+            assert pd.isna(row["signal_eur"]), key
+            continue
+        assert np.isclose(row["pred_c_eur"], test.loc[key, "_pred_c"]), key
+        assert np.isclose(row["signal_eur"], np.exp(test.loc[key, "log_fee_signal"]))
+
+
+def test_unscored_seasons_leave_predictions_empty(dashboard):
+    """Training-window transfers must not be given a prediction: the models saw
+    them, so any number would be memorisation rather than forecasting."""
+    train_rows = dashboard.raw.loc[dashboard.raw["season"] <= ui.C.TRAIN_LAST_SEASON]
+    assert not train_rows.empty
+
+    checked = 0
+    for player_id in train_rows["player_id"].unique()[:25]:
+        rows = LT.player_transfers(dashboard, int(player_id))
+        early = rows.loc[rows["season"] <= ui.C.TRAIN_LAST_SEASON]
+        assert early["pred_b_eur"].isna().all()
+        assert early["pred_c_eur"].isna().all()
+        checked += len(early)
+    assert checked > 0
+
+
+def test_lookup_tables_format_money_with_separators(dashboard):
+    rows = LT.player_transfers(dashboard, _scored_player(dashboard))
+    summary = LT.summary_table(rows)
+    assert len(summary) == len(rows)
+    assert summary["Fee paid (EUR)"].str.contains(",").any()
+    assert not summary["Fee paid (EUR)"].str.contains("nan").any()
+
+    scored = rows.loc[rows["pred_c_eur"].notna()]
+    if not scored.empty:
+        errors = LT.error_table(scored.iloc[0])
+        assert len(errors) == 3
+        assert errors["Error %"].str.endswith("%").all()
+        assert errors["Predicted (EUR)"].str.contains(",").all()
+
+    profile = LT.profile_table(rows.iloc[0])
+    assert set(profile.columns) == {"Field", "Value"}
+    assert not profile["Value"].str.contains("nan").any()
+
+
+def test_season_median_is_a_positive_reference_for_the_gauge(dashboard):
+    """The gauge needs a real reference: the paid-fee median for one season."""
+    median = season_median(dashboard.paid, ui.C.LAST_SEASON)
+    paid_season = dashboard.paid.loc[dashboard.paid["season"] == ui.C.LAST_SEASON]
+    assert median == pytest.approx(paid_season["fee_eur"].median())
+    assert median > 0
+    # A season with no paid rows must not blow up the gauge.
+    assert season_median(dashboard.paid, 1900) == 0.0

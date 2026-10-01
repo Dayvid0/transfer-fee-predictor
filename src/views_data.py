@@ -6,24 +6,36 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src import ui
+from src import visuals as V
 
-CHART_TEMPLATE = "plotly_white"
 
-
-def _style(fig: go.Figure, title: str, x: str, y: str) -> go.Figure:
+def _style(fig: go.Figure, title: str, x: str, y: str, **kw) -> go.Figure:
+    """Title, axis labels and the shared dark layout, in one place."""
     fig.update_layout(
         title=title,
         xaxis_title=x,
         yaxis_title=y,
-        template=CHART_TEMPLATE,
-        margin=dict(l=10, r=10, t=60, b=10),
-        height=420,
+        height=kw.pop("height", 420),
+        **V.plot_layout(**kw),
     )
     return fig
 
 
+def _hero(title: str, caption: str) -> None:
+    """The pitch banner that opens the dashboard."""
+    st.markdown(
+        f'<div class="hero">{V.pitch_svg(title)}</div>', unsafe_allow_html=True
+    )
+    st.caption(caption)
+
+
 def overview(pipeline: ui.Pipeline) -> None:
     st.header("Overview")
+    _hero(
+        "Transfer fee predictor",
+        "A synthetic transfer market, generated locally and scored on seasons "
+        "the models never saw.",
+    )
     st.write(
         "This project predicts what a football player will cost when he moves. "
         "It runs on a synthetic transfer market that the pipeline itself "
@@ -56,7 +68,7 @@ def overview(pipeline: ui.Pipeline) -> None:
         x="season",
         y="median_fee",
         hover_data={"transfers": ":,", "median_fee": ":,.0f"},
-        color_discrete_sequence=["#2E6F9E"],
+        color_discrete_sequence=[ui.PALETTE["accent"]],
     )
     fig.update_traces(
         hovertemplate="Season %{x}<br>Median fee EUR %{y:,.0f}<br>"
@@ -98,15 +110,15 @@ def feature_importance(pipeline: ui.Pipeline) -> None:
         x="share_pct",
         y="feature",
         orientation="h",
-        color_discrete_sequence=["#2E6F9E"],
+        color_discrete_sequence=[ui.PALETTE["secondary"]],
     )
     _style(
         fig,
         "LightGBM gain share by feature",
         "Share of total gain (%)",
         "Feature",
+        height=max(420, 26 * len(imp)),
     )
-    fig.update_layout(height=max(420, 26 * len(imp)))
     st.plotly_chart(fig, width="stretch")
     top = pipeline.importance.iloc[0]
     st.caption(

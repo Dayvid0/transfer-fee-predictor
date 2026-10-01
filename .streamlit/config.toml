@@ -1,9 +1,18 @@
-# Dashboard runs entirely offline: no telemetry, no usage pings.
-[browser]
-gatherUsageStats = false
+# Streamlit theme: dark base with a pitch-green accent.
+# Everything renders locally. "sans serif" resolves to the local system font
+# stack, so no font is ever downloaded.
+
+[theme]
+base = "dark"
+primaryColor = "#22C55E"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#141D2E"
+textColor = "#E6EDF5"
+linkColor = "#34D399"
+font = "sans serif"
 
 [server]
 headless = true
 
-[runner]
-fastReruns = true
+[browser]
+gatherUsageStats = false

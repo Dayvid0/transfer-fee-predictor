@@ -1,9 +1,10 @@
 """Dashboard helpers: cached pipeline access, EUR formatting, profile scoring.
 
-The scoring path deliberately reuses ``features.build_features`` and
-``features.deflate`` instead of hand-assembling a design row, so the
-one-hot baselines and derived columns can never drift from what the models were
-trained on. Nothing here refits or alters a model.
+The scoring path reuses ``features.build_features`` and ``features.deflate``
+rather than hand-assembling a design row, so the one-hot baselines and derived
+columns can never drift from what the models were trained on. Nothing here
+refits or alters a model. ``PALETTE`` and ``CSS`` are the single source of truth
+for the theme; the SVG and gauge builders live in ``src.visuals``.
 """
 from __future__ import annotations
 
@@ -18,23 +19,57 @@ from src import evaluate as E
 from src import features as F
 from src.train import fit_models
 
-DEFAULT_PROFILE = {
-    "age": 25,
-    "position": "ST",
-    "league": "Premier League",
-    "goals_p90": 0.25,
-    "xg_p90": 0.24,
-    "minutes": 2400,
-    "contract_years_left": 3.0,
-    "market_value_eur": 10_000_000,
-    "season": 2025,
+# The one palette. Charts, cards and SVGs all read from this dict.
+PALETTE = {
+    "accent": "#22C55E", "accent_soft": "#16A34A", "secondary": "#0EA5E9",
+    "warn": "#F59E0B", "danger": "#EF4444", "muted": "#64748B",
+    "text": "#E6EDF5", "on_accent": "#04180D",
+    "pitch_a": "#0F2A1D", "pitch_b": "#081C13",
+    "position": {
+        "GK": "#38BDF8", "CB": "#818CF8", "LB": "#A78BFA", "RB": "#A78BFA",
+        "DM": "#2DD4BF", "CM": "#34D399", "AM": "#22C55E",
+        "LW": "#A3E635", "RW": "#A3E635", "ST": "#FACC15",
+    },
 }
+
+# Ordered series colours for categorical plotly traces.
+SERIES = [PALETTE["accent"], PALETTE["secondary"], PALETTE["warn"],
+          PALETTE["muted"], PALETTE["danger"], "#C084FC"]
+
+CSS = """
+<style>
+.stApp { background: radial-gradient(1200px 600px at 20% -10%, #10241a 0%, #0B1220 60%); }
+.hero { border: 1px solid rgba(34,197,94,.35); border-radius: 16px; overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,.45); margin-bottom: 1rem; }
+.pcard-row { display: flex; gap: .75rem; flex-wrap: wrap; }
+.pcard { flex: 1 1 190px; background: linear-gradient(160deg,#16233a,#101a2c);
+         border: 1px solid rgba(34,197,94,.30); border-radius: 14px; padding: .85rem;
+         box-shadow: 0 6px 18px rgba(0,0,0,.40); }
+.pcard-top { display: flex; align-items: center; gap: .65rem; }
+.pcard-name { font-weight: 700; font-size: 1.02rem; color: #E6EDF5; line-height: 1.15; }
+.pcard-sub { font-size: .78rem; color: #9FB3C8; margin-top: .15rem; }
+.pcard-fee { margin-top: .7rem; font-size: 1.5rem; font-weight: 800; color: #22C55E;
+            font-variant-numeric: tabular-nums; }
+div[data-testid="stMetricValue"] { color: #22C55E; font-weight: 700; }
+h1, h2, h3 { letter-spacing: -.01em; } .stCaption { color: #9FB3C8; }
+</style>
+"""
+
+DEFAULT_PROFILE = {
+    "age": 25, "position": "ST", "league": "Premier League", "goals_p90": 0.25,
+    "xg_p90": 0.24, "minutes": 2400, "contract_years_left": 3.0,
+    "market_value_eur": 10_000_000, "season": 2025,
+}
+
+
+def inject_css() -> None:
+    """Apply the theme CSS. Called once per script run."""
+    st.markdown(CSS, unsafe_allow_html=True)
 
 
 @dataclass
 class Pipeline:
     """Everything the dashboard reads, computed once per process."""
-
     raw: pd.DataFrame
     paid: pd.DataFrame
     frame: pd.DataFrame
