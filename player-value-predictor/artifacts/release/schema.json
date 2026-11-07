@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "input_columns": [
+    "age_years",
+    "height_cm",
+    "minutes_365",
+    "appearances_365",
+    "goals_365",
+    "assists_365",
+    "yellow_365",
+    "red_365",
+    "league",
+    "position_group"
+  ],
+  "feature_columns": [
+    "age_years",
+    "height_cm",
+    "minutes_365",
+    "appearances_365",
+    "goals_per90",
+    "assists_per90",
+    "yellow_per90",
+    "red_per90",
+    "league",
+    "position_group"
+  ],
+  "numeric_features": [
+    "age_years",
+    "height_cm",
+    "minutes_365",
+    "appearances_365",
+    "goals_per90",
+    "assists_per90",
+    "yellow_per90",
+    "red_per90"
+  ],
+  "categorical_features": [
+    "league",
+    "position_group"
+  ],
+  "allowed_leagues": [
+    "GB1",
+    "ES1",
+    "IT1",
+    "L1",
+    "FR1"
+  ],
+  "allowed_positions": [
+    "GK",
+    "DEF",
+    "MID",
+    "ATT"
+  ],
+  "missing_policy": "Only height may be missing; training-fitted median plus missing indicator.",
+  "eligibility": "Top-five league; positive listing; at least 450 prior-year minutes.",
+  "lookup_as_of": "2025-06-30",
+  "lookup_note": "Historical eligible valuations, not live player profiles.",
+  "range": {
+    "nominal_coverage": 0.8,
+    "log_radius": 0.8571244152327324
+  }
+}

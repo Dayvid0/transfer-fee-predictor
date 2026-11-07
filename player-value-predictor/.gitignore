@@ -1,0 +1,18 @@
+# environments and secrets
+.venv/
+venv/
+.env
+*.env
+
+# data lives outside the repo (/mnt/data/datasets); never commit raw or large files
+data/
+*.duckdb
+
+# caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# local model and player-data artifacts; review the dataset license before publishing
+artifacts/phase2b/
