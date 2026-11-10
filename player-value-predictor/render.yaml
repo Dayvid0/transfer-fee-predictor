@@ -1,0 +1,19 @@
+# In Dayvid0/transfer-fee-predictor, choose Blueprint Path:
+# player-value-predictor/render.yaml
+services:
+  - type: web
+    name: player-value-predictor-api
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./player-value-predictor/Dockerfile
+    dockerContext: ./player-value-predictor
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: PVP_LLM_ENABLED
+        value: "false"
+      - key: PVP_RATE_LIMIT_PER_MINUTE
+        value: "60"
+      - key: PVP_ARTIFACT_DIR
+        value: /app/artifacts/release
