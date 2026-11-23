@@ -1,0 +1,51 @@
+{
+  "chosen_model": {
+    "family": "hist_gradient_boosting",
+    "history": "recent",
+    "max_leaf_nodes": 31,
+    "max_iter": 300
+  },
+  "model_name": "hist_gradient_boosting_recent_max_iter=300_max_leaf_nodes=31",
+  "fit_start": "2020-07-08",
+  "fit_end": "2024-12-31",
+  "fit_rows": 25840,
+  "selection_start_exclusive": "2024-06-30",
+  "selection_end": "2024-12-31",
+  "calibration_start_exclusive": "2024-12-31",
+  "calibration_end": "2025-06-30",
+  "calibration_rows": 2681,
+  "test_start_exclusive": "2025-06-30",
+  "test_end": "2026-06-12",
+  "nominal_coverage": 0.8,
+  "log_radius": 0.8571244152327324,
+  "target": "Transfermarkt listed market value in EUR",
+  "target_transform": "log1p",
+  "selection_rule": "Lowest early-validation MAE; then RMSLE; then candidate name.",
+  "range_method": "abs(log1p(actual)-log1p(predicted)); ceil((n+1)*coverage) order statistic",
+  "range_limit": "Temporal drift and repeated players mean nominal coverage is not guaranteed.",
+  "status": "frozen_before_test",
+  "development_digest": "9a9a42c4a9f9430d13ee1cf3fea84635745a007f2151cce65e01de93cb3a10a9",
+  "versions": {
+    "scikit-learn": "1.9.1",
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "scipy": "1.18.1",
+    "joblib": "1.6.0",
+    "duckdb": "2.0.0"
+  },
+  "python": "3.12.3",
+  "source_hashes": {
+    "train.py": "f052558e26917652e51f0d21522411c9436a63245a6b766b9d60d876bf57095a",
+    "features.py": "948da2192010f6120a725252ec230d09c29d72919e140009696f081ac0796a40",
+    "evaluate.py": "77006ae33a45f11812aca77273092b5290ecf7b78d569b50f762884f4c72d3d9",
+    "baselines.py": "dfca4c5c461e89194b35ec4c3c1edd9c40eb5b8ff1833e527f6bcfa802626156",
+    "config.py": "933ef96fd23925e527b03ee951da22e3643a8960a327f7c0b0114e7174d7d960"
+  },
+  "artifact_hashes": {
+    "baseline_history.parquet": "266753c0c477ee794174b347a88d29316d3a21cd5146708e16d59990267860c2",
+    "development_metrics.json": "519506f85d678f9f2eee4a3237aba4d80766835928e37743f8fb894f75613891",
+    "model.joblib": "7fd28f0aac561eb41c6dc10b5a336ec20c10e9948540327f7a4aad078de75e19",
+    "players.parquet": "0a6902b160d907a6df40b51640587e8828b7a9bf252ddc4c150db3ff5b539d17",
+    "schema.json": "d498ba6d5292f11d1b1a1e23fa7940525dda7c181d0fd761f0865773f6aac032"
+  }
+}

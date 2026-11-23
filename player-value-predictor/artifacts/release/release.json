@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "dataset_revision": "e44f186d6f06dd8452aaf54c7921ba66c961f637",
+  "dataset_license": "CC0-1.0",
+  "files": {
+    "PROVENANCE.md": "8a67ba66b77f943ab0c79ff1337a3251e3e0a6d2bf70dd3c0974546f454570fc",
+    "baseline_history.parquet": "266753c0c477ee794174b347a88d29316d3a21cd5146708e16d59990267860c2",
+    "development_metrics.json": "519506f85d678f9f2eee4a3237aba4d80766835928e37743f8fb894f75613891",
+    "model.joblib": "7fd28f0aac561eb41c6dc10b5a336ec20c10e9948540327f7a4aad078de75e19",
+    "players.parquet": "0a6902b160d907a6df40b51640587e8828b7a9bf252ddc4c150db3ff5b539d17",
+    "schema.json": "d498ba6d5292f11d1b1a1e23fa7940525dda7c181d0fd761f0865773f6aac032",
+    "selection.json": "35fab70ae61f5d9e102e0a03de2b89fd416de99e2ad17ef21bb08a3eaa294686",
+    "test_metrics.json": "5f4c2646f96529f05f054d7c13aba06f61d3d11b2d758257e3185434d1d2e948"
+  }
+}

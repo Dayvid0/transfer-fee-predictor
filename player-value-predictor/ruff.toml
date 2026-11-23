@@ -1,0 +1,5 @@
+target-version = "py312"
+# Correctness lint for the existing project, including frozen training sources.
+# Do not rewrite frozen modules merely to satisfy formatting or unused-import rules.
+[lint]
+select = ["E9", "F63", "F7", "F82"]

@@ -1,0 +1,13 @@
+**
+!Dockerfile
+!requirements.txt
+!src/
+!src/*.py
+!artifacts/
+!artifacts/release/
+!artifacts/release/*.json
+!artifacts/release/*.joblib
+!artifacts/release/*.parquet
+!artifacts/release/*.md
+!licenses/
+!licenses/*.txt

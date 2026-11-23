@@ -1,0 +1,35 @@
+
+=== A. do national-team matches appear in appearances? (season 2024/25, all clubs) ===
+                      type   rows   minutes
+           domestic_league 121733 7776685.0
+              domestic_cup   9903  650461.0
+                     other   8436  547361.0
+         international_cup   6679  430932.0
+(competition not in table)   1645  103377.0
+
+=== B. per valuation year (provisional top-5): does the 2024 drop survive a minutes filter? ===
+       rows  pct_zero_minutes  rows_450  players_450  median_value_m  p90_value_m
+year
+2013   2198              47.8       832          752             3.0         15.0
+2014   8428              40.4      3808         2124             3.0         14.0
+2015  10299              48.7      4145         2092             3.0         15.0
+2016  11446              51.0      4394         2112             3.5         18.0
+2017  12473              47.9      5021         2263             3.5         20.0
+2018  13362              43.7      5990         2389             6.0         30.0
+2019  14286              55.2      4823         2415             7.0         35.0
+2020  13924              49.9      5244         2298             6.5         32.0
+2021  18515              52.3      6806         2632             6.0         30.0
+2022  15231              55.6      5363         2473             6.0         30.0
+2023  13654              47.5      5574         2563             7.0         35.0
+2024   8137              19.2      5297         2499             7.5         35.0
+2025   8018              13.7      5519         2476             8.0         35.0
+2026   3665               5.6      2849         2088            10.0         40.0
+
+=== C. the target: listed value for rows with >= 450 minutes (millions of EUR) ===
+0.10     1.0
+0.25     2.0
+0.50     5.0
+0.75    15.0
+0.90    30.0
+0.99    80.0
+max: 200.0   share above 50m: 3.23%

@@ -1,0 +1,102 @@
+
+=== 1. version table ===
+                             commit_hash
+e44f186d6f06dd8452aaf54c7921ba66c961f637
+
+=== 2. date ranges ===
+              tbl first_date  last_date       n
+player_valuations 2000-01-20 2026-06-12  656301
+      appearances 2012-07-03 2026-06-28 1894350
+
+=== 3a. the five league codes we expect ===
+competition_id           name country_name            type   sub_type
+           ES1         laliga        Spain domestic_league first_tier
+           FR1        ligue-1       France domestic_league first_tier
+           GB1 premier-league      England domestic_league first_tier
+           IT1        serie-a        Italy domestic_league first_tier
+            L1     bundesliga      Germany domestic_league first_tier
+MISSING CODES: none
+
+=== 3b. competition types in the dataset ===
+                     type                          sub_type  n
+          domestic_league                        first_tier 31
+             domestic_cup                      domestic_cup 10
+                    other                domestic_super_cup  9
+                    other                          play_off  3
+                    other     uefa_europa_league_qualifying  1
+        international_cup             uefa_champions_league  1
+        international_cup  uefa_champions_league_qualifying  1
+                    other                uefa_europa_league  1
+national_team_competition                         world_cup  1
+national_team_competition                      copa_america  1
+                    other uefa_conference_league_qualifying  1
+national_team_competition                     afc_asian_cup  1
+national_team_competition             africa_cup_of_nations  1
+national_team_competition                         uefa_euro  1
+                    other            uefa_conference_league  1
+        international_cup                    uefa_super_cup  1
+
+=== 4. is player_club_domestic_competition_id time-stamped, or a snapshot? ===
+
+=== 4a. players who changed club: does the competition column change too? ===
+ changed_club  players  comp_also_changes
+        False    22707                0.0
+         True    18821             7890.0
+
+=== 4b. agreement with the clubs table ===
+ rows_with_known_club    agree
+               563328 563328.0
+
+=== 4c. one well-travelled player: rows where the club changes ===
+       name       date current_club_name  current_club_id comp
+Caner Erkin 2006-05-21        Manisaspor             1267  NaN
+Caner Erkin 2007-03-29       CSKA Moscow             2410  RU1
+Caner Erkin 2009-09-21       Galatasaray              141  TR1
+Caner Erkin 2010-07-05        Fenerbahce               36  TR1
+Caner Erkin 2016-07-15       Inter Milan               46  IT1
+Caner Erkin 2017-01-10       Besiktas JK              114  TR1
+Caner Erkin 2020-12-23        Fenerbahce               36  TR1
+Caner Erkin 2021-10-12  Fatih Karagümrük             6646  TR1
+Caner Erkin 2023-03-14     Basaksehir FK             6890  TR1
+Caner Erkin 2023-10-20          Eyüpspor             7160  TR1
+Caner Erkin 2025-10-08       Sakaryaspor             2463  NaN
+
+=== 5. valuation rows per year (top-5 by the valuation column; provisional until 4 is settled) ===
+  yr  valuations  players
+2013        2198     1926
+2014        8428     4727
+2015       10299     5186
+2016       11446     5830
+2017       12473     6019
+2018       13362     6124
+2019       14286     6613
+2020       13924     6754
+2021       18515     7220
+2022       15231     7395
+2023       13654     7449
+2024        8137     3840
+2025        8018     3566
+2026        3665     2692
+
+=== 6. does a 365-day window have data? (valuations since 2013-07-01, provisional top-5) ===
+valuation rows: 153,636   distinct players: 12,714
+  minutes in prior 365 days >=     1:   84,166 rows ( 54.8%)
+  minutes in prior 365 days >=   450:   65,665 rows ( 42.7%)
+  minutes in prior 365 days >=   900:   54,480 rows ( 35.5%)
+  minutes in prior 365 days >=  1800:   34,086 rows ( 22.2%)
+minutes quantiles (10/25/50/75/90%): [0, 0, 102, 1594, 2724]
+
+=== 7. where do those minutes come from? (clubs in top-5 leagues, season 2024/25) ===
+             type                          sub_type   minutes  pct
+  domestic_league                        first_tier 3460199.0 84.0
+     domestic_cup                      domestic_cup  261725.0  6.4
+international_cup             uefa_champions_league  245208.0  6.0
+            other                uefa_europa_league  119361.0  2.9
+            other                domestic_super_cup   17735.0  0.4
+            other uefa_conference_league_qualifying   10109.0  0.2
+international_cup  uefa_champions_league_qualifying    4283.0  0.1
+international_cup                    uefa_super_cup    1982.0  0.0
+
+=== 8. data quality ===
+ bad_values  dup_player_dates  null_minutes  odd_minutes  no_birthdate
+          1                 0             0            0            49

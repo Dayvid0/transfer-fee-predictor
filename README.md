@@ -180,3 +180,13 @@ The suite is built around the failure modes rather than line coverage:
 
 Full detail, including per-season MAE and the complete importance table, is in
 [`reports/results.md`](reports/results.md).
+
+
+## Historical player-value API
+
+The separate [player-value-predictor](player-value-predictor/README.md) project
+estimates Transfermarkt listed market values from historical player profiles
+and match statistics. It includes a frozen model, prediction API, grounded
+explanations, Docker packaging, CI, and a free Render Blueprint. Its chronological
+evaluation and data licence are documented separately; its results do not alter
+the synthetic transfer-fee experiment above.
